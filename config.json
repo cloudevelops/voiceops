@@ -4,5 +4,10 @@
   "recording_url": "http://recording.url/",
   "mattermost_api_url": "https://mattermost.chat.url/hooks/api_key",
   "redis_host": "redis.url:6379",
-  "redis_password": "redis_password"
+  "redis_password": "redis_password",
+  "queues": {
+    "1000": "support",
+    "2000": "info",
+    "3000": "sales"
+  }
 }

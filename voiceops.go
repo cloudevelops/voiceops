@@ -80,16 +80,7 @@ func sendMattermost(alert string) {
 }
 
 func getQueue(queueCode string) string {
-	queue := ""
-	switch queueCode {
-	case "1000":
-		queue = "support"
-	case "2000":
-		queue = "info"
-	case "3000":
-		queue = "sales"
-	}
-	return queue
+	return viper.GetStringMapString("queues")[queueCode]
 }
 
 func buildCallUrl(fields []string) string {
