@@ -1,0 +1,8 @@
+{
+  "queue_log": "/path/to/queue_log",
+  "recording_path": "/path/to/recording/path",
+  "recording_url": "http://recording.url/",
+  "mattermost_api_url": "https://mattermost.chat.url/hooks/api_key",
+  "redis_host": "redis.url:6379",
+  "redis_password": "redis_password"
+}
