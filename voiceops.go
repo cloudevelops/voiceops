@@ -31,10 +31,17 @@ func main() {
 }
 
 func parseLine(str string){
-	fields := strings.Split(str, "|")
-	msg := ""
 	re := regexp.MustCompile("(ENTERQUEUE|COMPLETEAGENT|COMPLETECALLER|ABANDON)")
 	match := re.FindString(str);
+	fields := strings.Split(str, "|")
+
+	if match != "" && isPhoneNumberAllowed(fields[6]){
+		buildMessage(match, fields)
+	}
+}
+
+func buildMessage(match string, fields []string){
+	msg := ""
 
 	switch match {
 	case "ENTERQUEUE":
@@ -51,6 +58,21 @@ func parseLine(str string){
 	}
 }
 
+func isPhoneNumberAllowed(phone string) bool {
+	whiteList := viper.GetStringSlice("phone_numbers_whitelist")
+	if len(whiteList) > 0 {
+		for _, b := range whiteList {
+			if b == phone {
+				return true
+			}
+		}
+		fmt.Println("Ignore phone number: " + phone)
+		return false
+	} else {
+		return true
+	}
+}
+
 func buildIncomingMessage(fields []string) string {
 	info, data := getCallerInfo(fields[6])
 	return "Incoming call from " + info + " in **" + getQueue(fields[2]) + "** queue" + data
@@ -60,7 +82,9 @@ func buildCallCompleteMessage(fields []string) string {
 	url := buildCallUrl(fields)
 	phone := getPhoneFromUrl(url)
 	info, _ := getCallerInfo(phone)
-	return "Recording for call from " + info + " at: " + url
+	msg := "Recording for call from " + info + " [here](" + url + ")"
+	msg += addNewContactLink(phone)
+	return msg
 }
 
 func buildCallAbandonedMessage(fields []string) string {
@@ -106,17 +130,28 @@ func getCallerInfo(phone string) (string, string) {
 		Password: viper.GetString("redis_password"),
 	})
 
-	val := client.Get("e3customers/+420" + phone).Val()
+	val := client.Get(viper.GetString("redis_path") + phone).Val()
 	if val != "" {
 		r := strings.NewReplacer("{", "", "}", "", "\"", "", "\n", "\\n", "\r", "")
 		jsonVal := r.Replace(val)
 		cus := Customer{}
 		json.Unmarshal([]byte(val), &cus)
-		return "**" + cus.Name + "** (" + cus.Note + ") from **" + cus.Company + "** company",
-		"\\n```" + jsonVal + "```"
+
+		return buildCallerInfo(phone, cus), "\\n```" + jsonVal + "```"
 	} else {
 		return "**" + phone + "**", ""
 	}
+}
+
+func buildCallerInfo(phone string, customer Customer) string {
+	info := "**" + customer.Name + "**, **" + phone + "**"
+	if customer.Note != "" {
+		info += " (" + customer.Note + ")"
+	}
+	if customer.Company != "" {
+		info += " from **" + customer.Company + "** company"
+	}
+	return info
 }
 
 func loadConfig() {
@@ -126,4 +161,11 @@ func loadConfig() {
 	if err != nil {
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
+}
+
+func addNewContactLink(phone string) string {
+	if viper.GetBool("show_add_contact_url") {
+		return "\\n[Add new customer to DB](" + viper.GetString("add_contact_url") + phone + ")"
+	}
+	return ""
 }
